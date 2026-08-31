@@ -24,7 +24,7 @@ ACCOUNT_SERVICE_PORT=xxxx
 ### 1. User Registration
 Registers a new user in the system. Ensures no duplicate emails or phone numbers exist.
 
-*   **Endpoint:** `POST /register`
+*   **Endpoint:** `POST api/auth/register`
 *   **Request Body:**
     ```json
     {
@@ -41,7 +41,7 @@ Registers a new user in the system. Ensures no duplicate emails or phone numbers
 ### 2. User Login
 Authenticates a user and issues an Access Token (15m) and an HTTP-only Refresh Token (7d).
 
-*   **Endpoint:** `POST /login`
+*   **Endpoint:** `POST api/auth/login`
 *   **Request Body:**
     ```json
     {
@@ -56,7 +56,7 @@ Authenticates a user and issues an Access Token (15m) and an HTTP-only Refresh T
 ### 3. Refresh Access Token
 Generates a fresh Access Token using a valid Refresh Token stored in cookies.
 
-*   **Endpoint:** `POST /refresh-token`
+*   **Endpoint:** `POST api/refreshToken`
 *   **Cookies Required:** `refreshToken`
 *   **Responses:**
     *   `200 OK`: `{ "accessToken": "new_jwt_token_here" }`
@@ -65,7 +65,7 @@ Generates a fresh Access Token using a valid Refresh Token stored in cookies.
 ### 4. Forgot Password (Send OTP)
 Generates a 6-digit OTP, stores it in the database with a 5-minute expiry, and triggers the external Email Service to send it.
 
-*   **Endpoint:** `POST /forgot-password`
+*   **Endpoint:** `POST api/auth/forgot-password`
 *   **Request Body:**
     ```json
     {
@@ -79,7 +79,7 @@ Generates a 6-digit OTP, stores it in the database with a 5-minute expiry, and t
 ### 5. Verify OTP
 Validates the OTP sent to the user. If successful, issues a temporary 10-minute Reset Token.
 
-*   **Endpoint:** `POST /verify-otp`
+*   **Endpoint:** `POST api/auth/verify-otp`
 *   **Request Body:**
     ```json
     {
@@ -94,7 +94,7 @@ Validates the OTP sent to the user. If successful, issues a temporary 10-minute 
 ### 6. Reset Password
 Resets the user's password using the token acquired from the Verify OTP step.
 
-*   **Endpoint:** `POST /reset-password`
+*   **Endpoint:** `POST api/auth/reset-password`
 *   **Request Body:**
     ```json
     {
@@ -109,7 +109,7 @@ Resets the user's password using the token acquired from the Verify OTP step.
 ### 7. Get Customer Profile
 Retrieves the authenticated user's profile, including their KYC status and linked banking account details.
 
-*   **Endpoint:** `GET /profile`
+*   **Endpoint:** `GET api/auth/profile`
 *   **Headers Required:** `Authorization: Bearer <Access_Token>` (Requires JWT Middleware)
 *   **Responses:**
     *   `200 OK`:
