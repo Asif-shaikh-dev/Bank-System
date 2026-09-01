@@ -3,8 +3,7 @@ import bcrypt from "bcrypt";
 import axios from 'axios';
 import { pool } from "../config/db.js";
 import { comparePasswords } from "../utils/password.js";
-const AccountServiceURL = `http://localhost:${process.env.ACCOUNT_SERVICE_PORT}`;
-const EmailServiceURL = `http://localhost:${process.env.EMAIL_SERVICE_PORT}`;
+
 
 
 const checkCustomerExists = async (email_id, phone_no) => {
@@ -222,7 +221,7 @@ export const forgotPassword = async (req, res) => {
         );
 
         // Call your external Email Service running on port 9000
-        await axios.post(EmailServiceURL+"/email/send-otp", {
+        await axios.post(process.env.EMAIL_SERVICE_URL+"/email/send-otp", {
             email: email,
             otp: otp
         });
