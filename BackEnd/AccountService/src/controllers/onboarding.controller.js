@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { pool } from '../config/db.js'; // Your PostgreSQL connection pool
 import { generateAccountNumber } from '../utils/accounts.util.js';
 
+
 export const handleOnboarding = async (req, res) => {
     const {
         name, email_id, date_of_birth, Pan_card_no, residential_address,
