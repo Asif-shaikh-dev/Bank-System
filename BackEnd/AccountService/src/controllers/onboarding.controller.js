@@ -1,7 +1,8 @@
 import bcrypt from 'bcrypt';
 import { pool } from '../config/db.js'; // Your PostgreSQL connection pool
-import { generateAccountNumber } from '../utils/accounts.util.js';
+import { duplicateApplicationCheck, generateAccountNumber } from '../utils/accounts.util.js';
 import { getOnboardingEmailTemplate } from '../utils/emailTemplates.js';
+import { accessRisk } from '../utils/accessRisk.js';
 import axios from 'axios';
 
 export const handleOnboarding = async (req, res) => {
@@ -66,18 +67,22 @@ export const handleOnboarding = async (req, res) => {
         }
 
         // Prevent duplicate applications/customers for this user or aadhaar number
-        const duplicateCheck = await pool.query(
-            `SELECT id FROM onboarding_applications WHERE aadhaar_no = $1 OR user_id = $2 LIMIT 1;`,
-            [aadhaar_no, userId]
-        );
-        if (duplicateCheck.rows.length > 0) {
-            return res.status(400).json({ success: false, message: "Duplicate entry: This user or KYC document has already applied." });
+        if(await duplicateApplicationCheck(pool, aadhaar_no, userId)) {
+            return res.status(409).json({ success: false, message: "Duplicate application detected. You have already applied or are an existing customer." });
         }
 
+        let randomTier;
+        try {
+            randomTier = await accessRisk(Pan_card_no);
+        } catch (error) {
+            console.error("Risk assessment failed:", error);
+            return res.status(500).json({ success: false, message: "Risk assessment failed. Please try again later." });
+        }
+        
         // STEP 3: Risk Assessment (kept as-is for now)
         // const riskTiers = [0, 1, 2];
         // const randomTier = riskTiers[Math.floor(Math.random() * riskTiers.length)];
-        const randomTier = 0;
+        // const randomTier = 0;
 
         let applicationStatus = 'PENDING_REVIEW';
         if (randomTier === 0) {
@@ -157,3 +162,13 @@ export const handleOnboarding = async (req, res) => {
         return res.status(500).json({ success: false, message: "Internal server onboarding failure." });
     }
 };
+
+export const getOnboardingList = async (req, res) => {
+    try {
+        const result = await pool.query(`SELECT * FROM onboarding_applications WHERE status = 'PENDING_REVIEW' ORDER BY created_at DESC;`);
+        return res.status(200).json({ success: true, data: result.rows });
+    } catch (error) {
+        console.error("Failed to fetch onboarding list:", error);
+        return res.status(500).json({ success: false, message: "Internal server error while fetching onboarding list." });
+    }
+}

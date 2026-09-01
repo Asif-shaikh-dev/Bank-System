@@ -7,6 +7,7 @@ app.use(express.json())
 
 
 app.use("/api/onboarding",onBoardingRouter)
+app.use("/api/admin/onboarding",onBoardingRouter)
 
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {

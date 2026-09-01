@@ -17,3 +17,17 @@ export async function generateAccountNumber(client) {
 
     return accountNumber;
 }
+
+
+export async function duplicateApplicationCheck(client, aadhaar_no, userId) {
+    try {
+        const result = await client.query(
+            `SELECT id FROM onboarding_applications WHERE aadhaar_no = $1 OR user_id = $2 LIMIT 1;`,
+            [aadhaar_no, userId]
+        );
+        return result.rows.length > 0;
+    } catch (error) {
+        console.error('Error checking duplicate application:', error);
+        throw error;
+    }
+}
