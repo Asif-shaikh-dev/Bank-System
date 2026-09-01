@@ -1,7 +1,8 @@
 import bcrypt from 'bcrypt';
 import { pool } from '../config/db.js'; // Your PostgreSQL connection pool
 import { generateAccountNumber } from '../utils/accounts.util.js';
-
+import { getOnboardingEmailTemplate } from '../utils/emailTemplates.js';
+import axios from 'axios';
 
 export const handleOnboarding = async (req, res) => {
     const {
@@ -127,6 +128,16 @@ export const handleOnboarding = async (req, res) => {
              VALUES ($1, $2, $3, $4);`,
             [cifId, generatedAccNO, 0.00, 'SAVINGS']
         );
+
+        try {
+            await axios.post(process.env.EMAIL_SERVICE_URL + "/email/sendEmail", {
+            email: email_id,
+            subject: "Onboarding Successful",
+            htmlContent:getOnboardingEmailTemplate(name, cifId, generatedAccNO)
+            });
+        } catch (emailError) {
+            console.error("Failed to send onboarding success email:", emailError);
+        }
 
         // STEP 6: Welcome & Handshake Response
         return res.status(201).json({

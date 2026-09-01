@@ -221,12 +221,14 @@ export const forgotPassword = async (req, res) => {
         );
 
         // Call your external Email Service running on port 9000
-        await axios.post(process.env.EMAIL_SERVICE_URL+"/email/send-otp", {
-            email: email,
-            otp: otp
-        });
+        try {
+            await axios.post(process.env.EMAIL_SERVICE_URL + "/email/send-otp", {email: email,otp: otp});
 
-        return res.status(200).json({ message: "OTP sent to your email successfully." });
+            return res.status(200).json({ message: "OTP sent to your email successfully." });
+        } catch (error) {
+            console.error("Error sending OTP email:", error);
+            return res.status(500).json({ message: "Failed to send OTP. Please try again later." });
+        }
 
     } catch (error) {
         console.error("Forgot Password Error:", error);

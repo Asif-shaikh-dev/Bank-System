@@ -133,11 +133,123 @@ Retrieves the authenticated user's profile, including their KYC status and linke
     *   `404 Not Found`: User not found.
 
 ---
+# Account Service API
 
-## 🗄️ Database Assumptions
 
-This codebase assumes the PostgreSQL `pool` connection has access to the following schemas:
 
-*   **`users` table:** `id`, `name`, `email_id`, `phone_no`, `password`, `refresh_token`, `reset_otp`, `reset_otp_expiry`, `role`
-*   **`customers` table:** `id`, `user_id`, `status`
-*   **`accounts` table:** `id`, `customer_id`, `account_number`, `balance`, `account_type`
+## 🚀 API Endpoints
+
+### 1. Submit Onboarding Application
+
+Validates applicant details against Aadhaar KYC records, runs a risk assessment, and creates an onboarding application. If the application is auto-approved (risk tier `0`), a customer record and first savings account are created immediately; otherwise the application is held for manual compliance review.
+
+*   **Endpoint:** `POST /api/onboarding/apply`
+*   **Content-Type:** `multipart/form-data`
+*   **Headers Required:** `Authorization: Bearer <Access_Token>` (Requires JWT Middleware)
+
+#### Request Form Data
+
+**Text Fields**
+
+| Field Name | Type | Validation Rules | Description |
+| :--- | :--- | :--- | :--- |
+| `name` | String | Required | Full name of the applicant. Must exactly match `person_name` on the Aadhaar record (case-insensitive). |
+| `email_id` | String | Required, must be a valid email format | Primary email address; used to resolve `user_id` from the `users` table. |
+| `date_of_birth` | String | Required, `YYYY-MM-DD` | Date of birth. Applicant must be 18+ as of submission date. |
+| `Pan_card_no` | String | Required | Permanent Account Number (PAN). |
+| `residential_address` | String | Required | Current residential address. |
+| `Empoyment_status` | String | Required | Current employment status. |
+| `source_of_income` | String | Required | Primary source of funds. |
+| `phone_no` | String | Required | Contact mobile number. |
+| `aadhaar_no` | String | Required, exactly 12 numeric digits | 12-digit Aadhaar number, checked against `aadhaar_card`. |
+
+**File Uploads**
+
+| Field Name | Max Count | Description |
+| :--- | :--- | :--- |
+| `proof_of_identity` | 1 | Government-issued ID card or passport copy. |
+| `proof_of_address` | 1 | Utility bill, rental agreement, or bank statement. |
+| `passport_size_photo` | 1 | Recent passport-size photograph. |
+
+#### Responses
+
+*   **`201 Created`** — Application auto-approved; customer and account created.
+```json
+    {
+      "success": true,
+      "message": "Congratulations! Onboarding completed successfully.",
+      "data": {
+        "cif_id": 101,
+        "application_id": 55,
+        "status": "APPROVED",
+        "assigned_account": "000123456789",
+        "balance": 0.00
+      }
+    }
+```
+
+*   **`202 Accepted`** — Application submitted but held for manual review (non-zero risk tier).
+```json
+    {
+      "success": true,
+      "message": "Application submitted. Due to a risk tier of 1, your account is pending manual compliance review.",
+      "application_id": 55,
+      "status": "PENDING_REVIEW"
+    }
+```
+
+*   **`400 Bad Request`** — Missing required text fields.
+```json
+    { "success": false, "message": "Missing required onboarding parameters." }
+```
+
+*   **`400 Bad Request`** — Missing one or more required files.
+```json
+    { "success": false, "message": "Missing required documents. Please upload identity proof, address proof, and a passport-size photo." }
+```
+
+*   **`400 Bad Request`** — Malformed or invalid date of birth.
+```json
+    { "success": false, "message": "Invalid date format. Use YYYY-MM-DD." }
+```
+```json
+    { "success": false, "message": "The provided date of birth is invalid." }
+```
+
+*   **`400 Bad Request`** — Applicant under 18.
+```json
+    { "success": false, "message": "User must be at least 18 years old." }
+```
+
+*   **`404 Not Found`** — No matching user in the `users` table.
+```json
+    { "success": false, "message": "User not found in the system. Please register first." }
+```
+
+*   **`400 Bad Request`** — Aadhaar number not found in `aadhaar_card`.
+```json
+    { "success": false, "message": "KYC Failed: Invalid KYC number." }
+```
+
+*   **`400 Bad Request`** — Name does not match Aadhaar record.
+```json
+    { "success": false, "message": "KYC Failed: Name does not match government records." }
+```
+
+*   **`400 Bad Request`** — Duplicate application (same `user_id` or `aadhaar_no` already applied).
+```json
+    { "success": false, "message": "Duplicate entry: This user or KYC document has already applied." }
+```
+
+*   **`400 Bad Request`** — Upload validation failure (wrong file type or size, from `multer`).
+```json
+    { "success": false, "message": "Uploaded file size exceeds the 5MB limit." }
+```
+```json
+    { "success": false, "message": "Invalid document format. Only JPG, PNG, and PDF files are allowed." }
+```
+
+*   **`500 Internal Server Error`**
+```json
+    { "success": false, "message": "Internal server onboarding failure." }
+```
