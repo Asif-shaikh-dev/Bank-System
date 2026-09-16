@@ -20,7 +20,7 @@ app.use("/api/refreshToken",refreshTokenRouter)
 app.use("/api/auth",authRouter)
 
 app.get('/',(req,res)=>{
-    res.send("Hello from Auth Service")
+    res.send("Hello from Auth Service") 
 })
 
 export default app;

@@ -13,7 +13,7 @@ export const sendEmail = async ({
             html,
         });
 
-        console.log("Email sent successfully");
+        console.log(`Email sent successfully to ${to}`);
     } catch (err) {
         console.error(err);
         throw err;

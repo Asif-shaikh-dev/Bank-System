@@ -80,7 +80,7 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   const { email_id, password } = req.body;
-
+  console.log(`Login attempt for email: ${email_id}`);
   if (!email_id || !password) {
     return res.status(400).json({ message: "Missing required fields." });
   }
@@ -126,8 +126,9 @@ export const login = async (req, res) => {
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true, // Prevents frontend JS from reading the cookie
-    secure: true, // Ensures cookie is sent over HTTPS only
+    secure:  process.env.NODE_ENV === "production", // Ensures cookie is sent over HTTPS only
     sameSite: "strict", // Prevents CSRF attacks
+    path:"/",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
   });
 
@@ -135,7 +136,54 @@ export const login = async (req, res) => {
   return res.status(200).json({
     message: "Login successful.",
     accessToken,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email_id,
+      phone: user.phone_no
+    }
   });
+};
+
+// ==========================================
+// LOGOUT
+// ==========================================
+export const logout = async (req, res) => {
+  const cookies = req.cookies;
+
+  // No cookie at all — nothing to do, but still respond success
+  // so the frontend can safely clear its own state either way.
+  if (!cookies?.refreshToken) {
+    return res.status(200).json({ success: true, message: "Already logged out." });
+  }
+
+  const refreshToken = cookies.refreshToken;
+
+  try {
+    // Invalidate the refresh token server-side by clearing it from the DB.
+    // This is what actually revokes the session — clearing the cookie alone
+    // only affects this browser, it doesn't stop the token from being reused
+    // elsewhere if it were ever copied out (e.g. via a compromised client).
+    await pool.query(
+      `UPDATE users SET refresh_token = NULL WHERE refresh_token = $1`,
+      [refreshToken]
+    );
+  } catch (error) {
+    console.error("Logout DB error:", error);
+    // Don't block logout on a DB hiccup — still clear the cookie below
+  }
+
+  // IMPORTANT: clearCookie options must match the options used in res.cookie()
+  // when it was set (path, sameSite, secure, httpOnly) or the browser will
+  // treat it as a different cookie and silently no-op.
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+  });
+
+  return res.status(200).json({ success: true, message: "Logged out successfully." });
 };
 
 

@@ -1,17 +1,11 @@
 export const accessRisk = async (pan_number) => {
-    const lastTwoDigits = parseInt(pan_number.slice(-2), 10);
-    console.log(lastTwoDigits)
-    
-   
-    if (!isNaN(lastTwoDigits)) {
-        if (lastTwoDigits === 22) {
-            return 1; // 1 tier risk
-        } else if (lastTwoDigits === 33) {
-            return 3; // 3 tier risk
-        }
+    const lastChar = pan_number.slice(-1).toUpperCase(); // Get the last character and convert to uppercase
+
+    if (lastChar === 'F') {
+        return 1; // 1 tier risk
+    } else if (lastChar === 'B') {
+        return 3; // 3 tier risk
     }
 
     return 0; // Default case
 }
-
-

@@ -8,12 +8,12 @@ import axios from 'axios';
 export const handleOnboarding = async (req, res) => {
     const {
         name, email_id, date_of_birth, Pan_card_no, residential_address,
-        Empoyment_status, source_of_income, phone_no, aadhaar_no
+        Empoyment_status, source_of_income, phone_no, aadhaar_no,account_type,account_scheme
     } = req.body;
 
     // STEP 1: Application Form Validation
     if (!name || !email_id || !date_of_birth || !Pan_card_no || !residential_address ||
-        !Empoyment_status || !source_of_income || !phone_no || !aadhaar_no) {
+        !Empoyment_status || !source_of_income || !phone_no || !aadhaar_no || !account_type || !account_scheme) {
         return res.status(400).json({ success: false, message: "Missing required onboarding parameters." });
     }
 
@@ -62,9 +62,24 @@ export const handleOnboarding = async (req, res) => {
         }
 
         const aadhaarRecord = aadhaarResult.rows[0];
-        if (aadhaarRecord.person_name.trim().toLowerCase() !== name.trim().toLowerCase()) {
-            return res.status(400).json({ success: false, message: "KYC Failed: Name does not match government records." });
+        // if (aadhaarRecord.person_name.trim().toLowerCase() !== name.trim().toLowerCase()) {
+        //     return res.status(400).json({ success: false, message: "KYC Failed: Name does not match government records." });
+        // }
+
+        // STEP 2.6: PAN Card Verification (PAN Table Check)
+        const panResult = await pool.query(
+            `SELECT * FROM pancards WHERE pan_number = $1 LIMIT 1;`,
+            [Pan_card_no]
+        );
+        if (panResult.rows.length === 0) {
+            return res.status(400).json({ success: false, message: "PAN Verification Failed: Invalid PAN number." });
         }
+
+        const panRecord = panResult.rows[0];
+        // if (panRecord.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
+        //     return res.status(400).json({ success: false, message: "PAN Verification Failed: Name does not match PAN records." });
+        // }
+        
 
         // Prevent duplicate applications/customers for this user or aadhaar number
         if(await duplicateApplicationCheck(pool, aadhaar_no, userId)) {
@@ -95,14 +110,14 @@ export const handleOnboarding = async (req, res) => {
                 user_id, name, email_id, date_of_birth, pan_card_no, residential_address,
                 employment_status, source_of_income, phone_no, aadhaar_no,
                 proof_of_identity_path, proof_of_address_path, passport_photo_path,
-                risk_score, status
-            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+                risk_score, status,account_type,account_scheme
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
             RETURNING id;`,
             [
                 userId, name, email_id, date_of_birth, Pan_card_no, residential_address,
                 Empoyment_status, source_of_income, phone_no, aadhaar_no,
                 identityPath, addressPath, photoPath,
-                randomTier, applicationStatus
+                randomTier, applicationStatus,account_type,account_scheme
             ]
         );
         const applicationId = applicationInsert.rows[0].id;
@@ -163,12 +178,3 @@ export const handleOnboarding = async (req, res) => {
     }
 };
 
-export const getOnboardingList = async (req, res) => {
-    try {
-        const result = await pool.query(`SELECT * FROM onboarding_applications WHERE status = 'PENDING_REVIEW' ORDER BY created_at DESC;`);
-        return res.status(200).json({ success: true, data: result.rows });
-    } catch (error) {
-        console.error("Failed to fetch onboarding list:", error);
-        return res.status(500).json({ success: false, message: "Internal server error while fetching onboarding list." });
-    }
-}

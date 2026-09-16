@@ -31,3 +31,13 @@ export async function duplicateApplicationCheck(client, aadhaar_no, userId) {
         throw error;
     }
 }
+
+// Converts an absolute filesystem path (possibly Windows-style, with
+// backslashes) into a URL the frontend can actually load via the
+// static route above. Splitting on both separators keeps this working
+// regardless of whether this ever runs on Linux vs Windows.
+export const toDocumentUrl = (fullPath) => {
+    if (!fullPath) return null;
+    const filename = fullPath.split(/[/\\]/).pop();
+    return `/uploads/${filename}`;
+  };

@@ -1,6 +1,6 @@
 import expess from "express";
 import {body} from "express-validator";
-import { getOnboardingList, handleOnboarding } from "../controllers/onboarding.controller.js";
+import { handleOnboarding } from "../controllers/onboarding.controller.js";
 import { handleValidationErrors } from "../middleWare/validate.js";
 import { upload } from "../middleWare/upload.middleware.js";
 
@@ -20,5 +20,7 @@ onBoardingRouter.post("/apply",
 );
 
 
-onBoardingRouter.get("/list",getOnboardingList)
+
+
+
 export default onBoardingRouter;

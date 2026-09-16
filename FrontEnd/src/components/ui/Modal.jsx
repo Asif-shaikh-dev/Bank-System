@@ -1,135 +1,161 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  PiggyBank,
+  Wallet,
+  Landmark,
+  TrendingUp,
+  Repeat,
+  Home,
+  IdCard,
+  Car,
+  GraduationCap,
+  User,
+  ShieldCheck,
+  Settings,
+  ChevronRight,
+  FileText,
+} from "lucide-react";
 
-// ------------------------------------------------------------------
-// This file exists ONLY so you can preview the header live in chat.
-// In your real project, keep Modal.jsx and Navbar.jsx as separate
-// files (already provided) — this is just those two merged into one
-// file plus the demo data, so it can render without external imports.
-// ------------------------------------------------------------------
+const CATEGORY_ICONS = {
+  savings: PiggyBank,
+  salary: Wallet,
+  current: Landmark,
+  "fixed-deposit": TrendingUp,
+  sdp: Repeat,
+  "home-loan": Home,
+  "personal-loan": IdCard,
+  "car-loan": Car,
+  "education-loan": GraduationCap,
+  "personal-info": User,
+  security: ShieldCheck,
+  preferences: Settings,
+};
 
-export default function Modal({ isOpen, sections = [], onClose }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+function getItemPath(menuKey, sectionId) {
+  if (menuKey === "accounts") return "/open-account";
+  if (menuKey === "loan") return `/loans/${sectionId}`;
+  return "#";
+}
+
+function getCtaPath(menuKey, sectionId) {
+  if (menuKey === "accounts") return "/open-account";
+  if (menuKey === "loan") return `/loans/${sectionId}/apply`;
+  if (menuKey === "profile") return `/profile/${sectionId}`;
+  return "#";
+}
+
+export default function Modal({
+  isOpen,
+  menuKey,
+  sections = [],
+  onClose,
+  onItemSelect,
+  onCtaSelect,
+}) {
+  const [activeId, setActiveId] = useState(sections[0]?.id ?? null);
 
   useEffect(() => {
-    if (isOpen) setActiveIndex(0);
-  }, [isOpen]);
+    setActiveId(sections[0]?.id ?? null);
+  }, [sections]);
 
-  if (!sections.length) return null;
-
-  const active = sections[activeIndex];
-  const items = active.items || [];
-  const midpoint = Math.ceil(items.length / 2);
-  const columnOne = items.slice(0, midpoint);
-  const columnTwo = items.slice(midpoint);
+  const current = sections.find((section) => section.id === activeId) ?? sections[0];
+  const HeadingIcon = current ? CATEGORY_ICONS[current.id] ?? FileText : FileText;
 
   return (
-    <div
-      onMouseLeave={onClose}
-      className={`absolute left-1/2 top-full -translate-x-1/2 -translate-y-1/2 w-full border-t border-slate-200 bg-white shadow-2xl shadow-slate-900/10 z-40 overflow-hidden transition-all duration-300 ease-out ${
-        isOpen
-          ? "max-h-[280px] opacity-100 translate-y-0"
-          : "max-h-0 opacity-0 -translate-y-3 pointer-events-none"
-      }`}
-    >
-      <div className="mx-auto max-w-6xl grid grid-cols-[220px_1fr_260px] gap-8 px-6 py-6">
-        {/* Left: category list */}
-        <div className="border-r border-slate-100 pr-6">
-          <ul className="space-y-3">
-            {sections.map((section, idx) => (
-              <li key={section.id}>
-                <button
-                  type="button"
-                  onMouseEnter={() => setActiveIndex(idx)}
-                  onFocus={() => setActiveIndex(idx)}
-                  className={`text-left text-sm transition-colors ${
-                    idx === activeIndex
-                      ? "font-semibold text-teal-700"
-                      : "text-slate-600 hover:text-teal-700"
-                  }`}
+    <div className={`meganav ${isOpen ? "is-open" : ""}`}>
+      <div className="meganav-inner">
+        <nav className="meganav-categories" aria-label="Categories">
+          <ul>
+            {sections.map((section) => {
+              const SectionIcon = CATEGORY_ICONS[section.id] ?? FileText;
+              return (
+                <li key={section.id}>
+                  <button
+                    type="button"
+                    className={`meganav-cat-btn ${activeId === section.id ? "is-active" : ""}`}
+                    onMouseEnter={() => setActiveId(section.id)}
+                    onFocus={() => setActiveId(section.id)}
+                  >
+                    <SectionIcon size={16} />
+                    {section.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        <div className="meganav-items">
+          {current && (
+            <>
+              <div className="meganav-items-heading">
+                <HeadingIcon size={18} />
+                <h3>{current.label}</h3>
+              </div>
+
+              <div className="meganav-items-grid">
+                <ul>
+                  {current.items.map((item, i) => (
+                    <li key={item} style={{ "--i": i }}>
+                      {current.interactive === false ? (
+                        <span>{item}</span>
+                      ) : (
+                        <Link
+                          to={getItemPath(menuKey, current.id)}
+                          onClick={() => onItemSelect?.(current, item)}
+                        >
+                          {item}
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {current.interactive !== false && (
+                <Link
+                  to={`/${menuKey}/${current.id}`}
+                  className="meganav-viewall"
+                  onClick={onClose}
                 >
-                  {section.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Middle: plain-text item list, two columns */}
-        <div className="grid grid-cols-2 gap-x-8">
-          <ul>
-            {columnOne.map((item, i) => (
-              <li
-                key={i}
-                className="border-b border-slate-100 py-3 text-sm text-slate-700 first:pt-0"
-              >
-                <button type="button" className="text-left transition-colors hover:text-teal-700">
-                  {item}
-                </button>
-              </li>
-            ))}
-          </ul>
-          <ul>
-            {columnTwo.map((item, i) => (
-              <li
-                key={i}
-                className="border-b border-slate-100 py-3 text-sm text-slate-700 first:pt-0"
-              >
-                <button type="button" className="text-left transition-colors hover:text-teal-700">
-                  {item}
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          {active.viewAllItems && (
-            <div className="col-span-2 pt-2 text-right">
-              <button
-                type="button"
-                className="text-sm font-semibold text-orange-600 transition-colors hover:text-orange-700"
-              >
-                {active.viewAllItems} &nbsp;→
-              </button>
-            </div>
+                  {current.viewAllItems}
+                  <ChevronRight className="meganav-viewall-chevron" size={14} />
+                </Link>
+              )}
+            </>
           )}
         </div>
 
-        {/* Right: call-to-action panel */}
-        {active.cta && (
-          <div className="border-l border-slate-100 pl-6">
-            {active.cta.button && (
-              <button
-                type="button"
-                className="w-full rounded-full bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+        <div className="meganav-cta">
+          {current?.cta && (
+            <>
+              <Link
+                to={getCtaPath(menuKey, current.id)}
+                className="meganav-cta-btn"
+                onClick={() => onCtaSelect?.(current)}
               >
-                {active.cta.button}
-              </button>
-            )}
+                {current.cta.button}
+              </Link>
 
-            {active.cta.links?.length > 0 && (
-              <p className="mt-4 text-sm text-slate-600">
-                {active.cta.links.map((link, i) => (
-                  <span key={i}>
-                    <button type="button" className="transition-colors hover:text-teal-700">
+              <ul className="meganav-cta-links">
+                {current.cta.links.map((link) => (
+                  <li key={link}>
+                    <Link to="#" onClick={onClose}>
+                      <FileText size={14} />
                       {link}
-                    </button>
-                    {i < active.cta.links.length - 1 && (
-                      <span className="mx-2 text-slate-300">|</span>
-                    )}
-                  </span>
+                    </Link>
+                  </li>
                 ))}
-              </p>
-            )}
+              </ul>
 
-            {active.cta.viewAll && (
-              <button
-                type="button"
-                className="mt-4 block text-sm font-semibold text-orange-600 transition-colors hover:text-orange-700"
-              >
-                {active.cta.viewAll} &nbsp;→
-              </button>
-            )}
-          </div>
-        )}
+              <Link to={`/${menuKey}`} className="meganav-cta-viewall" onClick={onClose}>
+                {current.cta.viewAll}
+                <ChevronRight className="meganav-viewall-chevron" size={14} />
+              </Link>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

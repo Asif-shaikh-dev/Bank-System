@@ -1,13 +1,27 @@
 import express from "express"
+import cors from "cors"
+import path from "path"
 import onBoardingRouter from "./routes/onboarding.route.js"
 import multer from "multer"
+import adminRouter from "./routes/admin.routes.js"
+import cookieParser from 'cookie-parser';
 const app = express();
 
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+}));
 app.use(express.json())
+app.use(cookieParser())
 
+// Same resolution as UPLOAD_DIR in upload.middleware.js (process.cwd() + 'uploads'),
+// so this serves the exact folder multer writes to.
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.use("/api/onboarding",onBoardingRouter)
 app.use("/api/admin/onboarding",onBoardingRouter)
+app.use("/api/admin",adminRouter)
+
 
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
@@ -21,7 +35,6 @@ app.use((err, req, res, next) => {
         return res.status(400).json({ success: false, message: err.message });
     }
 
-    // fallback regular server errors
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
 });
 

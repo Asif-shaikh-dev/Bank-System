@@ -1,7 +1,7 @@
 import express from "express";
 
 import {body} from "express-validator";
-import {register,login,forgotPassword, verifyOtp, resetPassword, getCustomerProfile} from "../controllers/auth.controller.js";
+import {register,login,forgotPassword, verifyOtp, resetPassword, getCustomerProfile, logout} from "../controllers/auth.controller.js";
 import { handleValidationErrors } from "../middleware/validate.js";
 const authRouter = express.Router();
 
@@ -27,6 +27,7 @@ authRouter.post("/login",
     handleValidationErrors,
     login
 )
+authRouter.post("/logout",logout)
 
 authRouter.post("/forgot-password",forgotPassword);
 
@@ -35,6 +36,18 @@ authRouter.post("/verify-otp",verifyOtp);
 authRouter.post("/reset-password",resetPassword);
 
 authRouter.get("/getCustomerProfile",getCustomerProfile);
+
+authRouter.post("/admin-login",(req,res)=>{
+  const {email_id,password} = req.body;
+  console.log(`Admin login attempt with email: ${email_id} and password: ${password}`);
+  if(email_id === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD){
+    res.status(200).json({success:true,message:"Admin login successful"})
+  }else{
+    res.status(401).json({success:false,message:"Invalid admin credentials"})
+  }
+
+})
+
 
 
 export default authRouter;
