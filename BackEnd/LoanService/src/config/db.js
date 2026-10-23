@@ -1,7 +1,5 @@
+import "./env.js"; // must run before we read process.env below
 import pg from "pg";
-import dotenv from "dotenv";
-
-dotenv.config({ path: "../../.env" });
 
 const { Pool } = pg;
 
@@ -16,7 +14,7 @@ const pool = new Pool({
 const connectDb = async () => {
     try {
         await pool.query("SELECT 1");
-        console.log("PostgreSQL connected successfully");
+        console.log("PostgreSQL connected successfully (LoanService)");
     } catch (error) {
         console.error("PostgreSQL connection failed:", error);
         process.exit(1);

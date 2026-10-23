@@ -16,17 +16,16 @@ import Accounts from '../features/accounts/pages/Accounts';
 import AccountDetails from '../features/accounts/pages/AccountDetails';
 import Profile from '../features/profile/pages/Profile';
 
-// New pages the dashboard's quick actions link to.
-// Adjust these import paths if any of yours differ.
-// import TransferMoney from '../features/transactions/pages/TransferMoney';
-// import Transactions from '../features/transactions/pages/Transactions';
-// import Loans from '../features/loans/pages/Loans';
-// import ApplyLoan from '../features/loans/pages/ApplyLoan';
+// Loans — wired up now that LoanService's backend + these pages exist.
+import Loans from '../features/loans/pages/Loans';
+import ApplyLoan from '../features/loans/pages/ApplyLoan';
+
+// Still pending — Insurance has no backend service yet (see our
+// earlier discussion: InsuranceService doesn't exist, no DB tables).
 // import Insurance from '../features/insurance/pages/Insurance';
 // import ApplyInsurance from '../features/insurance/pages/ApplyInsurance';
-// import Profile from '../features/profile/pages/Profile';
-// import Accounts from '../features/accounts/pages/Accounts';
-// import AccountDetails from '../features/accounts/pages/AccountDetails';
+// import TransferMoney from '../features/transactions/pages/TransferMoney';
+// import Transactions from '../features/transactions/pages/Transactions';
 
 function App() {
   return (
@@ -44,6 +43,15 @@ function App() {
             <Route path="/profile/:section" element={<Profile/>}></Route>
             <Route path="/accounts" element={<Accounts/>}></Route>
             <Route path="/accounts/:id" element={<AccountDetails/>}></Route>
+
+            {/* /loans/:sectionId also resolves here — Loans.jsx doesn't
+                currently branch on that param (Modal.jsx's "View All"
+                link points at /loan/:sectionId, singular, which is a
+                separate mismatch — see note below), so for now both
+                /loans and /loans/:sectionId render the same browse page. */}
+            <Route path="/loans" element={<Loans/>}></Route>
+            <Route path="/loans/:sectionId" element={<Loans/>}></Route>
+            <Route path="/loans/:sectionId/apply" element={<ApplyLoan/>}></Route>
           </Route>
 
           <Route path="/admin" element={<AdminLayout />}>

@@ -1,9 +1,24 @@
-import app from "./src/app.js";
+import app from "./src/app.js"; // app.js imports config/env.js first, so dotenv is already loaded by the time we read process.env below
 import connectDb from "./src/config/db.js";
-const PORT = process.env.PORT || 5000;
+
+const PORT = process.env.LOAN_SERVICE_PORT || 6000;
+
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// LoanService/.env sits at the service root (BackEnd/LoanService/.env),
+// two levels up from src/config/. Neither server.js nor app.js in the
+// original code ever called dotenv.config(), so process.env.PORT etc.
+// were always undefined. This file must be imported FIRST, before
+// db.js or anything else that reads process.env.
+dotenv.config({ path: path.join(__dirname, "../../.env") });
 
 
-connectDb()
+connectDb();
 app.listen(PORT, () => {
     console.log(`Loan Service is running on port ${PORT}`);
 });
