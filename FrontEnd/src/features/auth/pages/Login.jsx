@@ -460,7 +460,7 @@ export default function AuthPage() {
                       value={registerData.name}
                       onChange={handleRegisterChange}
                       required
-                      placeholder="Salman Jamir Shaikh"
+                      placeholder="Enter Your Name"
                     />
                   </div>
                 </div>
@@ -491,7 +491,7 @@ export default function AuthPage() {
                       onChange={handleRegisterChange}
                       required
                       pattern="[0-9]{10,15}"
-                      placeholder="5566778899"
+                      placeholder="89xxxxxx90"
                     />
                   </div>
                 </div>

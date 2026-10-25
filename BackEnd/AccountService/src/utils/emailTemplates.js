@@ -39,3 +39,12 @@ export const getOnboardingEmailTemplate = (name, cifId, generatedAccNO) => {
 }
 
 
+export const getPendingReviewEmailTemplate = (name, applicationId) => `
+<p>Dear ${name},</p>
+<p>Thank you for applying. Your onboarding application (Ref: ${applicationId}) has been received successfully.</p>
+<p>It is now awaiting review by the bank. We will email you once a decision is made.</p>`;
+
+export const getRejectionEmailTemplate = (name) => `
+<p>Dear ${name},</p>
+<p>We regret to inform you that your onboarding application has been rejected.</p>
+<p>Thank you for your interest in our services.</p>`;

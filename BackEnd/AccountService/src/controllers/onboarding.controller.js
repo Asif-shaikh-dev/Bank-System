@@ -1,9 +1,10 @@
 import bcrypt from 'bcrypt';
 import { pool } from '../config/db.js'; // Your PostgreSQL connection pool
-import { duplicateApplicationCheck, generateAccountNumber } from '../utils/accounts.util.js';
-import { getOnboardingEmailTemplate } from '../utils/emailTemplates.js';
+import { duplicateApplicationCheck, generateAccountNumber,getOrCreateCustomer } from '../utils/accounts.util.js';
+import { getOnboardingEmailTemplate, getPendingReviewEmailTemplate } from '../utils/emailTemplates.js';
 import { accessRisk } from '../utils/accessRisk.js';
 import axios from 'axios';
+import { sendEmail } from '../utils/email.util.js';
 
 export const handleOnboarding = async (req, res) => {
     const {
@@ -81,18 +82,35 @@ export const handleOnboarding = async (req, res) => {
         // }
         
 
-        // Prevent duplicate applications/customers for this user or aadhaar number
-        if(await duplicateApplicationCheck(pool, aadhaar_no, userId)) {
-            return res.status(409).json({ success: false, message: "Duplicate application detected. You have already applied or are an existing customer." });
-        }
+        // STEP 2.7: Duplicate Application Check
+            const pending = await pool.query(
+                `SELECT 1 FROM onboarding_applications WHERE user_id = $1 AND status = 'PENDING_REVIEW' LIMIT 1;`,
+                [userId]
+            );
+            if (pending.rows.length > 0) {
+                return res.status(409).json({ success: false, message: "You already have an application under review." });
+            }
 
-        let randomTier;
-        try {
-            randomTier = await accessRisk(Pan_card_no);
-        } catch (error) {
-            console.error("Risk assessment failed:", error);
-            return res.status(500).json({ success: false, message: "Risk assessment failed. Please try again later." });
-        }
+            // 2) The Aadhaar number must not belong to a different user
+            const aadhaarTaken = await pool.query(
+                `SELECT 1 FROM customers WHERE aadhaar_no = $1 AND user_id <> $2
+                UNION
+                SELECT 1 FROM onboarding_applications
+                WHERE aadhaar_no = $1 AND user_id <> $2 AND status IN ('PENDING_REVIEW','APPROVED')
+                LIMIT 1;`,
+                [aadhaar_no, userId]
+            );
+            if (aadhaarTaken.rows.length > 0) {
+                return res.status(409).json({ success: false, message: "This Aadhaar number is already registered to another user." });
+            }
+
+            const randomTier = Math.random() < 0.5 ? 1 : 2; // never 0, so manual review is always required
+        // try {
+        //     randomTier = await accessRisk(Pan_card_no);
+        // } catch (error) {
+        //     console.error("Risk assessment failed:", error);
+        //     return res.status(500).json({ success: false, message: "Risk assessment failed. Please try again later." });
+        // }
         
         // STEP 3: Risk Assessment (kept as-is for now)
         // const riskTiers = [0, 1, 2];
@@ -104,73 +122,85 @@ export const handleOnboarding = async (req, res) => {
             applicationStatus = 'APPROVED';
         }
 
-        // STEP 4: Persist the application (source of truth for the onboarding attempt)
-        const applicationInsert = await pool.query(
-            `INSERT INTO onboarding_applications (
-                user_id, name, email_id, date_of_birth, pan_card_no, residential_address,
-                employment_status, source_of_income, phone_no, aadhaar_no,
-                proof_of_identity_path, proof_of_address_path, passport_photo_path,
-                risk_score, status,account_type,account_scheme
-            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
-            RETURNING id;`,
-            [
-                userId, name, email_id, date_of_birth, Pan_card_no, residential_address,
-                Empoyment_status, source_of_income, phone_no, aadhaar_no,
-                identityPath, addressPath, photoPath,
-                randomTier, applicationStatus,account_type,account_scheme
-            ]
-        );
-        const applicationId = applicationInsert.rows[0].id;
-
-        // If risk tier requires manual review, stop here — no customer record yet
-        if (applicationStatus === 'PENDING_REVIEW') {
-            return res.status(202).json({
-                success: true,
-                message: `Application submitted. Due to a risk tier of ${randomTier}, your account is pending manual compliance review.`,
-                application_id: applicationId,
-                status: applicationStatus
-            });
-        }
-
-        // STEP 5: APPROVED -> promote application into an actual customer record
-        const customerInsert = await pool.query(
-            `INSERT INTO customers (user_id, aadhaar_no, onboarding_application_id)
-             VALUES ($1, $2, $3)
-             RETURNING id;`, // this id is the CIF ID
-            [userId, aadhaar_no, applicationId]
-        );
-        const cifId = customerInsert.rows[0].id;
-
-        // Create their first bank account
-        const generatedAccNO = await generateAccountNumber(pool);
-        await pool.query(
-            `INSERT INTO accounts (customer_id, account_number, balance, account_type)
-             VALUES ($1, $2, $3, $4);`,
-            [cifId, generatedAccNO, 0.00, 'SAVINGS']
-        );
-
-        try {
-            await axios.post(process.env.EMAIL_SERVICE_URL + "/email/sendEmail", {
-            email: email_id,
-            subject: "Onboarding Successful",
-            htmlContent:getOnboardingEmailTemplate(name, cifId, generatedAccNO)
-            });
-        } catch (emailError) {
-            console.error("Failed to send onboarding success email:", emailError);
-        }
-
-        // STEP 6: Welcome & Handshake Response
-        return res.status(201).json({
-            success: true,
-            message: "Congratulations! Onboarding completed successfully.",
-            data: {
-                cif_id: cifId,
-                application_id: applicationId,
-                status: applicationStatus,
-                assigned_account: generatedAccNO,
-                balance: 0.00
-            }
-        });
+                // STEP 4 + 5: persist the application and, if auto-approved, create customer + account atomically
+                const client = await pool.connect();
+                let applicationId, cifId, generatedAccNO;
+                try {
+                    await client.query("BEGIN");
+        
+                    const applicationInsert = await client.query(
+                        `INSERT INTO onboarding_applications (
+                            user_id, name, email_id, date_of_birth, pan_card_no, residential_address,
+                            employment_status, source_of_income, phone_no, aadhaar_no,
+                            proof_of_identity_path, proof_of_address_path, passport_photo_path,
+                            risk_score, status, account_type, account_scheme
+                        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+                        RETURNING id;`,
+                        [
+                            userId, name, email_id, date_of_birth, Pan_card_no, residential_address,
+                            Empoyment_status, source_of_income, phone_no, aadhaar_no,
+                            identityPath, addressPath, photoPath,
+                            randomTier, applicationStatus, account_type, account_scheme
+                        ]
+                    );
+                    applicationId = applicationInsert.rows[0].id;
+        
+                    if (applicationStatus === 'APPROVED') {
+                        cifId = await getOrCreateCustomer(client, userId, aadhaar_no, applicationId);
+        
+                        generatedAccNO = await generateAccountNumber(client);
+                        await client.query(
+                            `INSERT INTO accounts (customer_id, account_number, balance, account_type, account_scheme)
+                             VALUES ($1, $2, 0.00, $3, $4);`,
+                            [cifId, generatedAccNO, account_type || 'SAVINGS', account_scheme || 'NOT_ASSIGNED']
+                        );
+                    }
+        
+                    await client.query("COMMIT");
+                } catch (txError) {
+                    await client.query("ROLLBACK");
+                    throw txError; // handled by the outer catch below
+                } finally {
+                    client.release();
+                }
+        
+                // Risk tier needs manual review: no customer record yet
+                if (applicationStatus === 'PENDING_REVIEW') {
+                    await sendEmail(
+                        email_id,
+                        "Application Received - Pending Review",
+                        getPendingReviewEmailTemplate(name, applicationId)
+                    );
+                    return res.status(202).json({
+                        success: true,
+                        message: `Application submitted. Due to a risk tier of ${randomTier}, your account is pending manual compliance review.`,
+                        application_id: applicationId,
+                        status: applicationStatus
+                    });
+                }
+        
+                // try {
+                //     await axios.post(process.env.EMAIL_SERVICE_URL + "/email/sendEmail", {
+                //         email: email_id,
+                //         subject: "Onboarding Successful",
+                //         htmlContent: getOnboardingEmailTemplate(name, cifId, generatedAccNO)
+                //     });
+                // } catch (emailError) {
+                //     console.error("Failed to send onboarding success email:", emailError);
+                // }
+        
+                // // STEP 6: Welcome & Handshake Response
+                // return res.status(201).json({
+                //     success: true,
+                //     message: "Congratulations! Onboarding completed successfully.",
+                //     data: {
+                //         cif_id: cifId,
+                //         application_id: applicationId,
+                //         status: applicationStatus,
+                //         assigned_account: generatedAccNO,
+                //         balance: 0.00
+                //     }
+                // });
 
     } catch (error) {
         console.error("Onboarding workflow exception:", error);

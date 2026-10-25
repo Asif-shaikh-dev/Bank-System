@@ -200,7 +200,7 @@ function FileUploadField({ label, name, fileState, onChange, error }) {
 }
 
 export default function OpenAccount() {
-  const { accountType, accountScheme, setAccountScheme } = useAccount();
+  const { accountType, accountScheme, setAccountScheme,setAccountType } = useAccount();
 
   const schemeOptions = ACCOUNT_SCHEME_OPTIONS[accountType] || [];
   const accountTypeLabel = accountType
@@ -268,6 +268,26 @@ export default function OpenAccount() {
     setAccountScheme(e.target.value); // keep the global selection in sync
   }
 
+  function handleTypeChange(e) {
+    // the dropdown shows labels; the context stores keys like "SAVINGS"
+    const key =
+      Object.keys(ACCOUNT_TYPE_LABELS).find(
+        (k) => ACCOUNT_TYPE_LABELS[k] === e.target.value
+      ) ?? null;
+  
+    setAccountType(key);
+    setAccountScheme(null);          // old scheme may not belong to the new type
+    updateField("accountScheme", ""); // reset the scheme field
+  
+    // clear the type error, if any
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.accountType;
+      return next;
+    });
+  }
+
+
   function handleFileChange(key) {
     return (e) => {
       const file = e.target.files?.[0];
@@ -319,8 +339,8 @@ export default function OpenAccount() {
       next.phone = "Enter a valid 10-digit phone number";
     if (!/^\d{12}$/.test(formData.aadhaar))
       next.aadhaar = "Enter a valid 12-digit Aadhaar number";
-    if (!accountType)
-      next.accountType = "Go back and choose an account type first";
+  
+    if (!accountType) next.accountType = "Select an account type";
     if (!formData.accountScheme)
       next.accountScheme = "Select an account scheme";
 
@@ -393,7 +413,7 @@ export default function OpenAccount() {
           <p className="mt-2 text-sm text-slate-500">
             {accountType
               ? `You're opening a ${accountTypeLabel.toLowerCase()}. Fill in your details below.`
-              : "Choose a scheme from the dashboard to get started."}
+              :  "Choose an account type and scheme to get started."}
           </p>
         </div>
 
@@ -419,7 +439,7 @@ export default function OpenAccount() {
                 value={formData.name}
                 onChange={handleChange}
                 error={errors.name}
-                placeholder="Asif Shaikh"
+                placeholder="Enter your name"
               />
               <TextField
                 label="Email address"
@@ -501,25 +521,25 @@ export default function OpenAccount() {
             </Section>
 
             <Section title="Account details">
-              <SelectField
-                label="Account type"
-                name="accountType"
-                value={accountTypeLabel}
-                onChange={() => {}}
-                error={errors.accountType}
-                options={accountType ? [accountTypeLabel] : []}
-                disabled
-              />
-              <SelectField
-                label="Account scheme"
-                name="accountScheme"
-                value={formData.accountScheme}
-                onChange={handleSchemeChange}
-                error={errors.accountScheme}
-                options={schemeOptions}
-                placeholder="Select a scheme"
-              />
-            </Section>
+  <SelectField
+    label="Account type"
+    name="accountType"
+    value={accountTypeLabel}
+    onChange={handleTypeChange}
+    error={errors.accountType}
+    options={Object.values(ACCOUNT_TYPE_LABELS)}
+    placeholder="Select an account type"
+  />
+  <SelectField
+    label="Account scheme"
+    name="accountScheme"
+    value={formData.accountScheme}
+    onChange={handleSchemeChange}
+    error={errors.accountScheme}
+    options={schemeOptions}
+    placeholder="Select a scheme"
+  />
+</Section>
 
             <Section title="Documents">
               <FileUploadField

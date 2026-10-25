@@ -15,10 +15,13 @@ import ComingSoon from '../features/admin/pages/ComingSoon';
 import Accounts from '../features/accounts/pages/Accounts';
 import AccountDetails from '../features/accounts/pages/AccountDetails';
 import Profile from '../features/profile/pages/Profile';
-
+import AdminLoanApplications from '../features/admin/pages/AdminLoanApplications';
 // Loans — wired up now that LoanService's backend + these pages exist.
 import Loans from '../features/loans/pages/Loans';
 import ApplyLoan from '../features/loans/pages/ApplyLoan';
+import AdminAccountHolders from '../features/admin/pages/AdminAccountHolders';
+import AdminKycRecords from '../features/admin/pages/AdminKycRecords';
+import AdminTransactions from '../features/admin/pages/AdminTransactions';
 
 // Still pending — Insurance has no backend service yet (see our
 // earlier discussion: InsuranceService doesn't exist, no DB tables).
@@ -52,15 +55,19 @@ function App() {
             <Route path="/loans" element={<Loans/>}></Route>
             <Route path="/loans/:sectionId" element={<Loans/>}></Route>
             <Route path="/loans/:sectionId/apply" element={<ApplyLoan/>}></Route>
+            
           </Route>
 
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="onboarding" element={<AdminOnboardingApplications />} />
-            <Route path="loans" element={<ComingSoon />} />
-            <Route path="insurance" element={<ComingSoon />} />
-            <Route path="transactions" element={<ComingSoon />} />
-          </Route>
+          
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="onboarding" element={<AdminOnboardingApplications />} />
+              <Route path="loans" element={<AdminLoanApplications />} />
+              <Route path="account-holders" element={<AdminAccountHolders />} />
+              <Route path="kyc" element={<AdminKycRecords />} />
+              <Route path="insurance" element={<ComingSoon />} />
+              <Route path="transactions" element={<AdminTransactions />} />
+            </Route>
         </Routes>
       </AuthProvider>
     </main>

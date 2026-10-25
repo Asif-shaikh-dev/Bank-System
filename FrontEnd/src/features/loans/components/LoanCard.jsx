@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { getIconForLoanType, getSlugForLoanType } from "../loanSections";
-
+//this is loan card component which is used to display the loan details in the loan page
 function formatAmount(value) {
   const num = Number(value);
   if (num >= 10000000) return `₹${(num / 10000000).toFixed(1)} Cr`;

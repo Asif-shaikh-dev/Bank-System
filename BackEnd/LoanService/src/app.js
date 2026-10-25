@@ -1,3 +1,5 @@
+//this is loanservice app.js file
+import loanAdminRouter from "./routes/loan.admin.route.js";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -33,6 +35,8 @@ app.get("/", (req, res) => {
 
 // Mounted at root /loan (not /loan/api/...) to match
 // VITE_LOAN_SERVICE_URL=http://localhost:6000 having no /api suffix.
+
+app.use("/loan/admin", loanAdminRouter);
 app.use("/loan", loanRouter);
 
 export default app;

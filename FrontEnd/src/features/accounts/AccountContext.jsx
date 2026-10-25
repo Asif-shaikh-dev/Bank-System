@@ -6,6 +6,7 @@ export function AccountProvider({ children }) {
   // Set when the user clicks a scheme card on the dashboard (e.g. "SAVINGS").
   // Treated as locked on the open-account form — the user already chose this.
   const [accountType, setAccountType] = useState(null);
+ 
 
   // Set alongside accountType as a default, but the user can still
   // change it on the open-account form (e.g. Regular vs Women's savings).

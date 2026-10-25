@@ -77,6 +77,7 @@ export const getAllLoanTypes = async () => {
     const result = await pool.query(
         `SELECT * FROM loan_types WHERE is_active = true ORDER BY category, name;`
     );
+ 
     return result.rows;
 };
 

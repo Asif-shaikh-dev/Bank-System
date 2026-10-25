@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import tokenService from "../services/tokenService";
-
+import authApi from "../services/authApi";   // new import
 const AUTH_SERVICE_URL =
   import.meta.env.VITE_AUTH_SERVICE_URL;
 //   console.log(`Using Auth Service URL: ${AUTH_SERVICE_URL}`);
@@ -10,6 +10,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   // true until we've checked whether an existing session can be restored
   const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +24,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     tokenService.clearToken();
     setUser(null);
+    setProfile(null);
     setIsAuthenticated(false);
   }, []);
 
@@ -57,6 +59,7 @@ export function AuthProvider({ children }) {
       }
     }
 
+
     restoreSession();
 
     const handleExpired = () => logout();
@@ -68,8 +71,22 @@ export function AuthProvider({ children }) {
     };
   }, [logout]);
 
+  
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setProfile(null);
+      return;
+    }
+    let cancelled = false;
+    authApi
+      .get("/auth/me")
+      .then(({ data }) => { if (!cancelled) setProfile(data.data); })
+      .catch((err) => console.error("Failed to load profile:", err));
+    return () => { cancelled = true; };
+  }, [isAuthenticated]);
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout,profile }}>
       {children}
     </AuthContext.Provider>
   );

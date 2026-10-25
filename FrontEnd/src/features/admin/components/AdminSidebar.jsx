@@ -1,22 +1,16 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import {
-  LayoutDashboard,
-  UserCheck,
-  Landmark,
-  ShieldCheck,
-  ArrowLeftRight,
-  LogOut,
-} from "lucide-react";
+import { LayoutDashboard, UserCheck, Landmark, ShieldCheck, ArrowLeftRight, Users, IdCard, LogOut } from "lucide-react";
 
 const NAV_ITEMS = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/onboarding", label: "Onboarding Applications", icon: UserCheck },
-  { to: "/admin/loans", label: "Loan Approvals", icon: Landmark, soon: true },
-  { to: "/admin/insurance", label: "Insurance Claims", icon: ShieldCheck, soon: true },
-  { to: "/admin/transactions", label: "Transactions", icon: ArrowLeftRight, soon: true },
+  { to: "/admin/loans", label: "Loan Approvals", icon: Landmark },
+  { to: "/admin/account-holders", label: "Account Holders", icon: Users },
+  { to: "/admin/kyc", label: "KYC Records", icon: IdCard },
+  { to: "/admin/transactions", label: "Transactions", icon: ArrowLeftRight },
+  // { to: "/admin/insurance", label: "Insurance Claims", icon: ShieldCheck, soon: true },
 ];
-
 export default function AdminSidebar() {
   const navigate = useNavigate();
 

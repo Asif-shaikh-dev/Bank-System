@@ -1,11 +1,14 @@
 import createApiClient from "../../services/apiClient";
-
+//this is loan.api.js
 // Matches the .env pattern: VITE_LOAN_SERVICE_URL has no /api suffix,
 // and LoanService's app.js mounts routes at app.use("/loan", loanRouter)
 // — so every call here needs the "/loan" segment added explicitly,
 // unlike accountApi.js where "/api" is already baked into the base URL.
 const LOAN_SERVICE_URL =
-  import.meta.env.VITE_LOAN_SERVICE_URL || "http://localhost:6000";
+  import.meta.env.VITE_LOAN_SERVICE_URL || "http://localhost:6100";
+
+  console.log("Loan service URL:", LOAN_SERVICE_URL);
+console.log("Full API URL:", `${LOAN_SERVICE_URL}/loan/types`);
 
 const loanClient = createApiClient(`${LOAN_SERVICE_URL}/loan`);
 

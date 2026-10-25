@@ -6,6 +6,7 @@ import Footer from "../../../components/common/Footer";
 import accountApi from "../account.api";
 import { formatCurrency } from "../../../utils/formatCurrency";
 import { ACCOUNT_TYPE_LABEL } from "../../../utils/constants";
+import AddMoney from "../../transactions/components/AddMoney";
 
 const maskAccountNumber = (number = "") => `•••• •••• ${number.slice(-4)}`;
 
@@ -98,6 +99,10 @@ export default function AccountDetails() {
               <p className="acc-details-balance">
                 {revealed ? formatCurrency(account.balance) : "₹ •••••••"}
               </p>
+              <AddMoney
+                accountId={account.id}
+                onDone={(newBalance) => setAccount((a) => ({ ...a, balance: newBalance }))}
+              />
               <p className="acc-details-number">
                 {revealed ? account.account_number : maskAccountNumber(account.account_number)}
               </p>

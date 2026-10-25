@@ -1,24 +1,33 @@
-import app from "./src/app.js"; // app.js imports config/env.js first, so dotenv is already loaded by the time we read process.env below
+// BackEnd/LoanService/server.js
+import "./src/config/env.js";   // first import
+import app from "./src/app.js";
 import connectDb from "./src/config/db.js";
 
-const PORT = process.env.LOAN_SERVICE_PORT || 6000;
+const PORT = process.env.LOAN_SERVICE_PORT;
+await connectDb();
+import { pool } from "./src/config/db.js";
 
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+const monthlyMaintenance = async () => {
+    try {
+        await pool.query(`UPDATE loan_emis SET status = 'OVERDUE' WHERE status = 'PENDING' AND due_date < CURRENT_DATE;`);
+        await pool.query(
+            `UPDATE loans l SET next_due_date = COALESCE(
+                (SELECT MIN(e.due_date) FROM loan_emis e WHERE e.loan_id = l.id AND e.status <> 'PAID'), l.next_due_date)
+             WHERE l.status = 'ACTIVE';`
+        );
+    } catch (e) {
+        console.error("Loan maintenance failed:", e);
+    }
+};
+monthlyMaintenance();
+setInterval(monthlyMaintenance, 24 * 60 * 60 * 1000);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// LoanService/.env sits at the service root (BackEnd/LoanService/.env),
-// two levels up from src/config/. Neither server.js nor app.js in the
-// original code ever called dotenv.config(), so process.env.PORT etc.
-// were always undefined. This file must be imported FIRST, before
-// db.js or anything else that reads process.env.
-dotenv.config({ path: path.join(__dirname, "../../.env") });
+const { setEmiInterval } = await import("./src/services/emiScheduler.js");
+const envSeconds = Number(process.env.EMI_INTERVAL_SECONDS);
+setEmiInterval(Number.isFinite(envSeconds) && envSeconds > 0 ? envSeconds : 0);
 
 
-connectDb();
-app.listen(PORT, () => {
-    console.log(`Loan Service is running on port ${PORT}`);
-});
+
+
+
+app.listen(PORT, () => console.log(`Loan Service is running on port ${PORT}`));

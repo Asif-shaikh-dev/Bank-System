@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState,useMemo } from "react";
 import Modal from "../ui/Modal";
 import { Link } from "react-router-dom";
 import { LogIn, LogOut, UserPlus } from "lucide-react";
@@ -149,54 +149,13 @@ const NAV_DATA = {
     },
   ],
 
-  profile: [
-    {
-      id: "personal-info",
-      label: "Personal Info",
-      interactive: false, // display-only, not a navigable scheme/product
-      items: [
-        "Name — Rohan Deshmukh",
-        "Customer ID — CUS-4471029",
-        "Mobile — +91 98xxxxxx21",
-        "Email — rohan.d@example.com",
-      ],
-      viewAllItems: "View Full Profile",
-      cta: {
-        button: "Edit Profile",
-        links: ["Update KYC", "Contact Us"],
-        viewAll: "View Full Profile",
-      },
-    },
-    {
-      id: "security",
-      label: "Security & Login",
-      interactive: false,
-      items: [
-        "2-Factor Auth — Enabled",
-        "Last Login — Today, 9:12 AM",
-        "Registered Device — iPhone 15",
-      ],
-      viewAllItems: "View Security Settings",
-      cta: {
-        button: "Manage Security",
-        links: ["Change Password", "Contact Us"],
-        viewAll: "View Security Settings",
-      },
-    },
-    {
-      id: "preferences",
-      label: "Preferences",
-      interactive: false,
-      items: ["SMS Alerts — On", "Email Statements — On", "Language — English"],
-      viewAllItems: "View All Preferences",
-      cta: {
-        button: "Edit Preferences",
-        links: ["Notification Settings", "Contact Us"],
-        viewAll: "View All Preferences",
-      },
-    },
-  ],
+ 
 };
+
+
+
+
+
 
 const NAV_ITEMS = [
   { key: "accounts", label: "Accounts" },
@@ -214,7 +173,9 @@ const ACCOUNT_TYPE_MAP = {
 };
 
 export default function Navbar() {
-  const { isAuthenticated, logout } = useAuth();
+const { isAuthenticated, logout, profile } = useAuth();
+
+  // const { isAuthenticated, logout } = useAuth();
   const [activeMenu, setActiveMenu] = useState(null);
   const [isSelected, setIsSelected] = useState(false);
   const [indicator, setIndicator] = useState({ left: 0, width: 0, opacity: 0 });
@@ -224,6 +185,37 @@ export default function Navbar() {
   const authRef = useRef(null);
 
   const { setAccountType, setAccountScheme } = useAccount();
+  // const { setAccountType, setAccountScheme } = useAccount();
+
+  const profileSections = useMemo(() => {
+    let items;
+    if (!isAuthenticated) {
+      items = ["Log in to see your profile details"];
+    } else if (!profile) {
+      items = ["Loading your details…"];
+    } else {
+      items = [
+        `Name — ${profile.name}`,
+        `Customer ID — ${profile.customer_id ?? "Pending account approval"}`,
+        `Mobile — ${profile.phone_masked}`,
+        `Email — ${profile.email_id}`,
+      ];
+    }
+    return [
+      {
+        id: "personal-info",
+        label: "Personal Info",
+        interactive: false,
+        items,
+        viewAllItems: "View Full Profile",
+        cta: {
+          button: isAuthenticated ? "View Full Profile" : "Login to continue",
+          links: ["Update KYC", "Contact Us"],
+          viewAll: "View Full Profile",
+        },
+      },
+    ];
+  }, [isAuthenticated, profile]);
 
   const updateIndicator = (key) => {
     const el = itemRefs.current[key];
@@ -643,7 +635,7 @@ export default function Navbar() {
           <Modal
             isOpen={activeMenu !== null}
             menuKey={activeMenu}
-            sections={NAV_DATA[activeMenu] || []}
+            sections={activeMenu === "profile" ? profileSections : NAV_DATA[activeMenu] || []}
             onClose={() => setActiveMenu(null)}
             onItemSelect={(section, item) =>
               handleItemSelect(activeMenu, section, item)

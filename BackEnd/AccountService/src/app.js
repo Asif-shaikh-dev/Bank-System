@@ -5,6 +5,8 @@ import onBoardingRouter from "./routes/onboarding.route.js"
 import multer from "multer"
 import adminRouter from "./routes/admin.routes.js"
 import cookieParser from 'cookie-parser';
+import accountsRouter from "./routes/accounts.route.js";
+import profileRouter from "./routes/profile.route.js";
 const app = express();
 
 app.use(cors({
@@ -17,10 +19,15 @@ app.use(cookieParser())
 // Same resolution as UPLOAD_DIR in upload.middleware.js (process.cwd() + 'uploads'),
 // so this serves the exact folder multer writes to.
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
-
 app.use("/api/onboarding",onBoardingRouter)
 app.use("/api/admin/onboarding",onBoardingRouter)
 app.use("/api/admin",adminRouter)
+
+//accounts route
+app.use("/api/accounts", accountsRouter);
+
+//profile route
+app.use("/api/profile", profileRouter);
 
 
 app.use((err, req, res, next) => {

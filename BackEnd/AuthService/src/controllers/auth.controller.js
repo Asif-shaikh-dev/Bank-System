@@ -4,7 +4,7 @@ import axios from 'axios';
 import { pool } from "../config/db.js";
 import { comparePasswords } from "../utils/password.js";
 
-
+//this is auth.controller.js
 
 const checkCustomerExists = async (email_id, phone_no) => {
   const cleanEmail = email_id.trim().toLowerCase();
@@ -422,4 +422,33 @@ export const getCustomerProfile = async (req, res) => {
         console.error("Get customer profile error:", error);
         return res.status(500).json({ success: false, message: "Internal server error." });
     }
+};
+
+
+
+const maskPhone = (p = "") =>
+  p.length > 4 ? `${p.slice(0, 2)}${"x".repeat(p.length - 4)}${p.slice(-2)}` : p;
+
+export const getMe = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.name, u.email_id, u.phone_no, u.role, c.id AS customer_id
+       FROM users u
+       LEFT JOIN customers c ON c.user_id = u.id
+       WHERE u.id = $1
+       LIMIT 1;`,
+      [req.user.userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+    const { phone_no, ...u } = result.rows[0];
+    return res.status(200).json({
+      success: true,
+      data: { ...u, phone_masked: maskPhone(phone_no) },
+    });
+  } catch (error) {
+    console.error("getMe error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error." });
+  }
 };

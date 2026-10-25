@@ -37,7 +37,7 @@ const flushQueue = (error, token = null) => {
  * too, later, so there's only one copy of this logic.
  */
 export default function createApiClient(baseURL) {
-  const client = axios.create({ baseURL, withCredentials: true });
+  const client = axios.create({ baseURL });
 
   client.interceptors.request.use((config) => {
     const token = tokenService.getToken();

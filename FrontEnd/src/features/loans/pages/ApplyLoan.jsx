@@ -6,7 +6,13 @@ import { toast } from "react-toastify";
 import loanApi from "../loan.api";
 import { findLoanTypeBySlug } from "../loanSections";
 
-const EMPLOYMENT_TYPE_OPTIONS = ["Salaried", "Self-Employed", "Business Owner", "Retired"];
+// const EMPLOYMENT_TYPE_OPTIONS = ["Salaried", "Self-Employed", "Business Owner", "Retired"];
+const EMPLOYMENT_TYPE_OPTIONS = [
+  { value: "SALARIED", label: "Salaried" },
+  { value: "SELF_EMPLOYED", label: "Self-Employed" },
+  { value: "BUSINESS_OWNER", label: "Business Owner" },
+  { value: "RETIRED", label: "Retired" },
+];
 
 function Section({ title, children }) {
   return (
@@ -77,11 +83,15 @@ function SelectField({ label, name, value, onChange, error, options, placeholder
         }`}
       >
         <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
+        {options.map((option) => {
+  const value = typeof option === "string" ? option : option.value;
+  const label = typeof option === "string" ? option : option.label;
+  return (
+    <option key={value} value={value}>
+      {label}
+    </option>
+  );
+})}
       </select>
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>

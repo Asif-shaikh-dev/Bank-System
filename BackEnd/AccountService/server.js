@@ -1,12 +1,13 @@
 import app from './src/app.js'
 import connectDb from './src/config/db.js';
-import { pool } from './src/config/db.js';
+
 import dotenv from 'dotenv'
-dotenv.config({path:'../../.env'})
+const result = dotenv.config({path:'../../.env'})
 
 
-
-const PORT = process.env.ACCOUNT_SERVICE_PORT 
+console.log( `Loaded environment variables from ${result.parsed ? 'file' : 'process.env'}:`, result.parsed || process.env
+);
+const PORT = process.env.ACCOUNT_SERVICE_PORT ;
 
 
 

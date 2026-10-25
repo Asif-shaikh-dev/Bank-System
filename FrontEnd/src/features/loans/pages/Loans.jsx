@@ -33,7 +33,14 @@ export default function Loans() {
       setIsLoadingTypes(true);
       try {
         const res = await loanApi.getLoanTypes();
-        if (!cancelled) setLoanTypes(res.data || []);
+
+        console.log("Full response:", res);
+        console.log("Loan types:", res?.data);
+        console.log("Is array:", Array.isArray(res?.data));
+        
+        if (!cancelled) {
+          setLoanTypes(res.data || []);
+        }
       } catch (err) {
         if (!cancelled) setError("Couldn't load loan products right now. Please try again shortly.");
       } finally {

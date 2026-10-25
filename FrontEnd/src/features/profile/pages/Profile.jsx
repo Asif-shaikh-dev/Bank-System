@@ -25,7 +25,7 @@ import { useAuth } from "../../../store/AuthContext";
 import profileApi from "../profile.api";
 import accountApi from "../../accounts/account.api";
 import { formatDate } from "../../../utils/formatDate";
-import { DEMO_USER_ID, ONBOARDING_STATUS_LABEL } from "../../../utils/constants";
+import {ONBOARDING_STATUS_LABEL } from "../../../utils/constants";
 
 // No security/preferences table exists yet — these stay as local,
 // editable-in-the-UI-only demo state until that's built.
@@ -58,39 +58,46 @@ const maskAadhaar = (aadhaar) =>
 export default function Profile() {
   const { section } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const userId = user?.user_id ?? DEMO_USER_ID;
+
+  const { profile } = useAuth();
+
 
   const activeTab = TABS.some((t) => t.id === section) ? section : "personal-info";
 
   const [application, setApplication] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [sensitiveRevealed, setSensitiveRevealed] = useState(false);
   const [prefs, setPrefs] = useState(MOCK_PREFERENCES);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [app, accs] = await Promise.all([
-        profileApi.getMyApplicationDemo(userId),
-        accountApi.getMyAccountsDemo(userId),
-      ]);
-      if (!cancelled) {
-        setApplication(app);
-        setAccounts(accs);
-        setIsLoading(false);
+      try {
+        const [app, accs] = await Promise.all([
+          profileApi.getMyApplication(),
+          accountApi.getMyAccounts(),
+        ]);
+        if (!cancelled) { setApplication(app); setAccounts(accs); }
+      } catch (err) {
+        console.error("Failed to load profile data:", err);
+        if (!cancelled) setLoadError(true);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [userId]);
+  }, []);
 
+  
+  console.log("accounts :", accounts);
   const togglePref = (key) => {
     setPrefs((p) => ({ ...p, [key]: !p[key] }));
     // TODO: PATCH /api/profile/preferences
   };
 
-  const displayName = user?.name || application?.name || "there";
+  const displayName = profile?.name || application?.name || "there";
   const notImplemented = (label) => () => toast.info(`${label} is coming soon.`);
 
   return (
@@ -229,7 +236,7 @@ export default function Profile() {
             <div>
               <h1>{displayName}</h1>
               <p>
-                {application ? `User ID · ${application.user_id}` : "Loading…"}
+                {profile ? profile.email_id : "Loading…"}
                 {application && ` · Applied ${formatDate(application.created_at)}`}
               </p>
             </div>
@@ -288,74 +295,90 @@ export default function Profile() {
                 </div>
               </div>
 
-              {isLoading || !application ? (
-                <p style={{ color: "#6E7C77", fontSize: 13.5 }}>Loading your details…</p>
-              ) : (
-                <>
-                  <div className="info-row">
-                    <span className="info-icon"><User size={16} /></span>
-                    <div>
-                      <p className="info-label">Full name</p>
-                      <p className="info-value">{application.name}</p>
-                    </div>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-icon"><Mail size={16} /></span>
-                    <div>
-                      <p className="info-label">Email</p>
-                      <p className="info-value">{application.email_id}</p>
-                    </div>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-icon"><Smartphone size={16} /></span>
-                    <div>
-                      <p className="info-label">Mobile</p>
-                      <p className="info-value">{application.phone_no}</p>
-                    </div>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-icon"><CalendarDays size={16} /></span>
-                    <div>
-                      <p className="info-label">Date of birth</p>
-                      <p className="info-value">{formatDate(application.date_of_birth)}</p>
-                    </div>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-icon"><IdCard size={16} /></span>
-                    <div>
-                      <p className="info-label">PAN</p>
-                      <p className="info-value">
-                        {sensitiveRevealed ? application.pan_card_no : maskPan(application.pan_card_no)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-icon"><IdCard size={16} /></span>
-                    <div>
-                      <p className="info-label">Aadhaar</p>
-                      <p className="info-value">
-                        {sensitiveRevealed ? application.aadhaar_no : maskAadhaar(application.aadhaar_no)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-icon"><MapPin size={16} /></span>
-                    <div>
-                      <p className="info-label">Residential address</p>
-                      <p className="info-value">{application.residential_address}</p>
-                    </div>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-icon"><Briefcase size={16} /></span>
-                    <div>
-                      <p className="info-label">Employment status · Source of income</p>
-                      <p className="info-value">
-                        {application.employment_status} · {application.source_of_income}
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
+              {!profile ? (
+  <p style={{ color: "#6E7C77", fontSize: 13.5 }}>Loading your details…</p>
+) : (
+  <>
+    {/* Basic info: from /auth/me, same source as the navbar */}
+    <div className="info-row">
+      <span className="info-icon"><User size={16} /></span>
+      <div>
+        <p className="info-label">Full name</p>
+        <p className="info-value">{profile.name}</p>
+      </div>
+    </div>
+    <div className="info-row">
+      <span className="info-icon"><Mail size={16} /></span>
+      <div>
+        <p className="info-label">Email</p>
+        <p className="info-value">{profile.email_id}</p>
+      </div>
+    </div>
+    <div className="info-row">
+      <span className="info-icon"><Smartphone size={16} /></span>
+      <div>
+        <p className="info-label">Mobile</p>
+        <p className="info-value">{profile.phone_masked}</p>
+      </div>
+    </div>
+
+    {/* KYC details: only if the user has submitted an application */}
+    {isLoading ? (
+      <p style={{ color: "#6E7C77", fontSize: 13.5, marginTop: 14 }}>Loading KYC details…</p>
+    ) : application ? (
+      <>
+        <div className="info-row">
+          <span className="info-icon"><CalendarDays size={16} /></span>
+          <div>
+            <p className="info-label">Date of birth</p>
+            <p className="info-value">{formatDate(application.date_of_birth)}</p>
+          </div>
+        </div>
+        <div className="info-row">
+          <span className="info-icon"><IdCard size={16} /></span>
+          <div>
+            <p className="info-label">PAN</p>
+            <p className="info-value">
+              {sensitiveRevealed ? application.pan_card_no : maskPan(application.pan_card_no)}
+            </p>
+          </div>
+        </div>
+        <div className="info-row">
+          <span className="info-icon"><IdCard size={16} /></span>
+          <div>
+            <p className="info-label">Aadhaar</p>
+            <p className="info-value">
+              {sensitiveRevealed ? application.aadhaar_no : maskAadhaar(application.aadhaar_no)}
+            </p>
+          </div>
+        </div>
+        <div className="info-row">
+          <span className="info-icon"><MapPin size={16} /></span>
+          <div>
+            <p className="info-label">Residential address</p>
+            <p className="info-value">{application.residential_address}</p>
+          </div>
+        </div>
+        <div className="info-row">
+          <span className="info-icon"><Briefcase size={16} /></span>
+          <div>
+            <p className="info-label">Employment status · Source of income</p>
+            <p className="info-value">
+              {application.employment_status} · {application.source_of_income}
+            </p>
+          </div>
+        </div>
+      </>
+    ) : (
+      <div className="accounts-tab-empty" style={{ marginTop: 14 }}>
+        <p>Complete KYC to see your full details here.</p>
+        <Link to="/open-account" className="accounts-tab-new">
+          <PlusCircle size={15} /> Open an account
+        </Link>
+      </div>
+    )}
+  </>
+)}
             </div>
           )}
 
@@ -372,9 +395,17 @@ export default function Profile() {
               </div>
 
               {isLoading ? (
-                <p style={{ color: "#6E7C77", fontSize: 13.5 }}>Loading your accounts…</p>
-              ) : accounts.length > 0 ? (
+                  <p style={{ color: "#6E7C77", fontSize: 13.5 }}>Loading your details…</p>
+                ) : !application ? (
+                  <div className="accounts-tab-empty">
+                    <p>No application on record yet.</p>
+                    <Link to="/open-account" className="accounts-tab-new">
+                      <PlusCircle size={15} /> Open an account
+                    </Link>
+                  </div>
+                ) : accounts.length > 0 ? (
                 <div className="accounts-tab-grid">
+                  
                   {accounts.map((acc) => (
                     <AccountCard key={acc.id} account={acc} linkTo={`/accounts/${acc.id}`} />
                   ))}

@@ -41,3 +41,19 @@ export const toDocumentUrl = (fullPath) => {
     const filename = fullPath.split(/[/\\]/).pop();
     return `/uploads/${filename}`;
   };
+
+
+export const getOrCreateCustomer = async (client, userId, aadhaarNo, applicationId) => {
+    const existing = await client.query(
+        `SELECT id FROM customers WHERE user_id = $1 LIMIT 1;`,
+        [userId]
+    );
+    if (existing.rows[0]) return existing.rows[0].id;
+
+    const created = await client.query(
+        `INSERT INTO customers (user_id, aadhaar_no, onboarding_application_id)
+         VALUES ($1, $2, $3) RETURNING id;`,
+        [userId, aadhaarNo, applicationId]
+    );
+    return created.rows[0].id;
+};

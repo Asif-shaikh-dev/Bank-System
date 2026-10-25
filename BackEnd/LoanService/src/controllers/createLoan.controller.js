@@ -77,17 +77,18 @@ export const applyForLoan = async (req, res) => {
         // req.files comes from upload.middleware.js's `.fields([...])`
         // config wired in loan.route.js. Document types below match the
         // field names used there — keep them in sync if you rename fields.
-        const documentFieldMap = {
-            income_proof: "INCOME_PROOF",
-            identity_proof: "IDENTITY_PROOF",
-            collateral_proof: "COLLATERAL_PROOF",
-        };
+        const incomeType = employment_type === "SELF_EMPLOYED" ? "ITR" : "SALARY_SLIP";
 
+            const documentFieldMap = {
+                income_proof: incomeType,
+                identity_proof: "PAN_POI",
+                collateral_proof: "COLLATERAL_PROOF",
+            };
         if (req.files) {
             for (const [fieldName, documentType] of Object.entries(documentFieldMap)) {
                 const fileArr = req.files[fieldName];
                 if (fileArr && fileArr[0]) {
-                    await insertLoanDocument(client, application.id, documentType, fileArr[0].path);
+                    await insertLoanDocument(client, application.id, documentType, `uploads/${fileArr[0].filename}`);
                 }
             }
         }

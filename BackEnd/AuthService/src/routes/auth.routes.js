@@ -1,12 +1,16 @@
 import express from "express";
 
 import {body} from "express-validator";
-import {register,login,forgotPassword, verifyOtp, resetPassword, getCustomerProfile, logout} from "../controllers/auth.controller.js";
+import {register,login,forgotPassword, verifyOtp, resetPassword, getCustomerProfile, logout,getMe} from "../controllers/auth.controller.js";
 import { handleValidationErrors } from "../middleware/validate.js";
+
+import { verifyToken } from "../middleware/JWT.js";
+
 const authRouter = express.Router();
 
 
 
+authRouter.get("/me", verifyToken, getMe);
 
 authRouter.post("/register",
     body('email_id').isEmail().withMessage('Invalid email address'),
